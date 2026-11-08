@@ -25,8 +25,10 @@ Todas las versiones están en [Releases](https://github.com/epalzaluisesteban-sy
 - Gráfica de progreso por ejercicio (peso máximo, 1RM estimado y volumen).
 - Duración de cada sesión y promedio por día de rutina.
 - Unidades en kg o lb y 7 colores de tema.
+- Exportación de los registros a Excel y PDF.
+- Copia de seguridad en un archivo (por ejemplo en Google Drive) para recuperar los datos al reinstalar o cambiar de celular.
 
-Los datos se guardan solo en el dispositivo.
+Los datos se guardan en el dispositivo. Al desinstalar la app, Android los borra, así que conviene guardar una copia de seguridad desde **Ajustes → Copia de seguridad**.
 
 ## Desarrollo
 
