@@ -141,6 +141,61 @@ void main() {
     expect(find.text('Compartir'), findsOneWidget);
   });
 
+  testWidgets('aproximaciones: se configuran y se ven al entrenar', (tester) async {
+    tester.view.physicalSize = const Size(360, 780);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    final store = await _storeWithData();
+    await tester.pumpWidget(_app(store, const SizedBox()));
+    await tester.pumpAndSettle();
+    final routine = store.routines.single;
+    final day = routine.days.first;
+
+    // Activar en el editor del ejercicio (3 series: 40, 60, 80 %) y agregar una cuarta.
+    await tester.tap(find.text('Torso A'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Remo con barra'));
+    await tester.pumpAndSettle();
+    final sw = find.text('Calcular series de aproximación');
+    await tester.scrollUntilVisible(sw, 200, scrollable: find.byType(Scrollable).last);
+    await tester.tap(sw);
+    await tester.pumpAndSettle();
+    expect(find.text('80 %'), findsOneWidget);
+    final more = find.descendant(
+      of: find.ancestor(of: find.text('Series de aproximación'), matching: find.byType(Row)),
+      matching: find.byTooltip('Más'),
+    );
+    await tester.ensureVisible(more);
+    await tester.tap(more);
+    await tester.pumpAndSettle();
+    expect(find.text('Aproximación 4'), findsOneWidget);
+    expect(find.text('90 %'), findsOneWidget);
+    await tester.ensureVisible(find.text('Guardar ejercicio'));
+    await tester.tap(find.text('Guardar ejercicio'));
+    await tester.pumpAndSettle();
+    expect(day.exercises.last.warmupPercents, [40, 60, 80, 90]);
+    expect(day.exercises.first.hasWarmup, isFalse);
+    expect(find.textContaining('Aproximación: 40 · 60 · 80 · 90 %'), findsOneWidget);
+
+    // En el entrenamiento solo el remo muestra los pesos (base: 32.5 kg de la vez anterior).
+    startWorkoutFlow(tester.element(find.byType(Scaffold).last), routine, day);
+    await tester.pumpAndSettle();
+    expect(find.text('Aproximación'), findsOneWidget);
+    expect(find.text('13 · 20 · 26 · 29 kg'), findsOneWidget);
+
+    // Al escribir un peso de trabajo más alto se recalcula al instante.
+    final remoCard = find.ancestor(of: find.text('Remo con barra'), matching: find.byType(Card));
+    await tester.scrollUntilVisible(remoCard, 200, scrollable: find.byType(Scrollable).first);
+    await tester.enterText(
+        find.descendant(of: remoCard, matching: find.byType(TextField)).first, '50');
+    await tester.pump();
+    expect(find.text('20 · 30 · 40 · 45 kg'), findsOneWidget);
+
+    store.discardActive();
+    await tester.pump(const Duration(seconds: 1));
+  });
+
   for (final size in [const Size(360, 780), const Size(1280, 800)]) {
     testWidgets('pantallas sin desbordes a ${size.width.toInt()} px', (tester) async {
       tester.view.physicalSize = size;

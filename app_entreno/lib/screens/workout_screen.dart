@@ -8,6 +8,7 @@ import '../models.dart';
 import '../store.dart';
 import '../theme.dart';
 import '../units.dart';
+import '../warmup.dart';
 import '../widgets/common.dart';
 import '../widgets/rest_timer.dart';
 import 'exercise_editor.dart' show restPresets;
@@ -166,6 +167,10 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                 log: s.exercises[i],
                 unit: store.unit,
                 previous: store.previousSetsFor(s.exercises[i].name),
+                warmupPercents: store
+                        .plannedExercise(s.routineId, s.exercises[i].exerciseId)
+                        ?.warmupPercents ??
+                    const [],
                 onSetDone: () => _onSetDone(s, i, s.exercises[i]),
               ),
               const SizedBox(height: 12),
@@ -195,19 +200,31 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
   }
 }
 
-class _ExerciseCard extends StatelessWidget {
+class _ExerciseCard extends StatefulWidget {
   const _ExerciseCard({
     super.key,
     required this.log,
     required this.unit,
     required this.previous,
+    required this.warmupPercents,
     required this.onSetDone,
   });
 
   final ExerciseLog log;
   final WeightUnit unit;
   final List<SetLog> previous;
+  final List<int> warmupPercents;
   final VoidCallback onSetDone;
+
+  @override
+  State<_ExerciseCard> createState() => _ExerciseCardState();
+}
+
+class _ExerciseCardState extends State<_ExerciseCard> {
+  ExerciseLog get log => widget.log;
+  WeightUnit get unit => widget.unit;
+  List<SetLog> get previous => widget.previous;
+  VoidCallback get onSetDone => widget.onSetDone;
 
   Future<void> _editRest(BuildContext context) async {
     var value = log.restSeconds;
@@ -306,6 +323,12 @@ class _ExerciseCard extends StatelessWidget {
                 ),
               ],
             ),
+            if (widget.warmupPercents.isNotEmpty)
+              _WarmupLine(
+                baseKg: warmupBaseKg(log.sets, previous),
+                percents: widget.warmupPercents,
+                unit: unit,
+              ),
             const SizedBox(height: 6),
             Row(
               children: [
@@ -328,6 +351,9 @@ class _ExerciseCard extends StatelessWidget {
                 previous: i < previous.length ? previous[i] : null,
                 fallback: () => _fallbackFor(i),
                 onDone: onSetDone,
+                // Recalcula las aproximaciones mientras se escribe el peso.
+                onWeightChanged:
+                    widget.warmupPercents.isEmpty ? null : () => setState(() {}),
               ),
             Row(
               children: [
@@ -369,6 +395,7 @@ class _SetRow extends StatefulWidget {
     required this.previous,
     required this.fallback,
     required this.onDone,
+    this.onWeightChanged,
   });
 
   final int index;
@@ -377,6 +404,7 @@ class _SetRow extends StatefulWidget {
   final SetLog? previous;
   final SetLog? Function() fallback;
   final VoidCallback onDone;
+  final VoidCallback? onWeightChanged;
 
   @override
   State<_SetRow> createState() => _SetRowState();
@@ -475,6 +503,7 @@ class _SetRowState extends State<_SetRow> {
                 final n = parseNum(v);
                 s.weightKg = n == null ? null : unitToKg(n, widget.unit);
                 store.saveSoon();
+                widget.onWeightChanged?.call();
               },
             ),
           ),
@@ -526,6 +555,53 @@ class _SetRowState extends State<_SetRow> {
                 size: 28,
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Pesos de las series de aproximación: "Aproximación  17 · 36 · 45 kg".
+class _WarmupLine extends StatelessWidget {
+  const _WarmupLine({required this.baseKg, required this.percents, required this.unit});
+
+  final double? baseKg;
+  final List<int> percents;
+  final WeightUnit unit;
+
+  @override
+  Widget build(BuildContext context) {
+    final base = baseKg;
+    return Container(
+      margin: const EdgeInsets.only(top: 8, right: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.accent.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.trending_up, size: 18, color: AppColors.muted),
+          const SizedBox(width: 8),
+          const Text('Aproximación',
+              style: TextStyle(color: AppColors.muted, fontSize: 13, fontWeight: FontWeight.w600)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: base == null
+                ? const Text('escribe el peso de trabajo',
+                    style: TextStyle(color: AppColors.muted, fontSize: 13))
+                : Text(
+                    '${warmupWeights(base, percents, unit).join(' · ')} ${unit.label}',
+                    semanticsLabel: 'Series de aproximación: '
+                        '${warmupWeights(base, percents, unit).join(', ')} ${unit.label}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      fontFeatures: [FontFeature.tabularFigures()],
+                    ),
+                  ),
           ),
         ],
       ),

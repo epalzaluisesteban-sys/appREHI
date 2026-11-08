@@ -22,6 +22,7 @@ Todas las versiones están en [Releases](https://github.com/epalzaluisesteban-sy
 - Rutinas con días (p. ej. Torso / Pierna) y ejercicios con series y rango de repeticiones programados.
 - Registro por serie de peso, repeticiones y RIR, con la fecha del entrenamiento.
 - Temporizador de descanso configurable por ejercicio, con alarma sonora.
+- Series de aproximación opcionales por ejercicio: eliges cuántas y el porcentaje de cada una, y durante el entrenamiento se muestra el peso de cada serie según tu peso de trabajo.
 - Gráfica de progreso por ejercicio (peso máximo, 1RM estimado y volumen).
 - Duración de cada sesión y promedio por día de rutina.
 - Unidades en kg o lb y 7 colores de tema.

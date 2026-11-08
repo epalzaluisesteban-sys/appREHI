@@ -5,6 +5,7 @@ import '../models.dart';
 import '../store.dart';
 import '../theme.dart';
 import '../units.dart';
+import '../warmup.dart';
 import '../widgets/common.dart';
 
 const restPresets = [60, 90, 120, 150, 180, 240];
@@ -155,6 +156,11 @@ class _ExerciseEditorState extends State<_ExerciseEditor> {
                 style: TextStyle(color: AppColors.muted, fontSize: 13),
               ),
             ),
+            const SectionTitle('Series de aproximación (opcional)'),
+            _WarmupEditor(
+              percents: _ex.warmupPercents,
+              onChanged: (list) => setState(() => _ex.warmupPercents = list),
+            ),
             const SectionTitle('Notas (opcional)'),
             TextField(
               controller: _notes,
@@ -171,6 +177,58 @@ class _ExerciseEditorState extends State<_ExerciseEditor> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Activa las series de aproximación y configura cuántas son y su porcentaje.
+class _WarmupEditor extends StatelessWidget {
+  const _WarmupEditor({required this.percents, required this.onChanged});
+
+  final List<int> percents;
+  final ValueChanged<List<int>> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final on = percents.isNotEmpty;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: const Text('Calcular series de aproximación'),
+          subtitle: const Text(
+            'Durante el entrenamiento verás el peso de cada una, '
+            'calculado con el peso más alto de tus series de trabajo.',
+            style: TextStyle(color: AppColors.muted, fontSize: 13),
+          ),
+          value: on,
+          onChanged: (v) => onChanged(v ? [...defaultWarmupPercents] : []),
+        ),
+        if (on) ...[
+          const SizedBox(height: 4),
+          NumberStepper(
+            label: 'Series de aproximación',
+            value: percents.length,
+            max: maxWarmupSets,
+            onChanged: (n) => onChanged(n > percents.length
+                ? [...percents, nextWarmupPercent(percents)]
+                : percents.sublist(0, n)),
+          ),
+          for (var i = 0; i < percents.length; i++) ...[
+            const SizedBox(height: 8),
+            NumberStepper(
+              label: 'Aproximación ${i + 1}',
+              value: percents[i],
+              min: 5,
+              max: 100,
+              step: 5,
+              format: (v) => '$v %',
+              onChanged: (v) => onChanged([...percents]..[i] = v),
+            ),
+          ],
+        ],
+      ],
     );
   }
 }

@@ -28,7 +28,9 @@ class PlannedExercise {
     this.repsMax = 12,
     this.restSeconds = 120,
     this.notes = '',
-  }) : id = id ?? newId();
+    List<int>? warmupPercents,
+  })  : id = id ?? newId(),
+        warmupPercents = warmupPercents ?? [];
 
   final String id;
   String name;
@@ -37,6 +39,12 @@ class PlannedExercise {
   int repsMax;
   int restSeconds;
   String notes;
+
+  /// Porcentaje del peso de trabajo de cada serie de aproximación.
+  /// Vacía = el ejercicio no usa series de aproximación.
+  List<int> warmupPercents;
+
+  bool get hasWarmup => warmupPercents.isNotEmpty;
 
   String get repsLabel => repsMin == repsMax ? '$repsMin' : '$repsMin–$repsMax';
 
@@ -48,6 +56,7 @@ class PlannedExercise {
         'repsMax': repsMax,
         'restSeconds': restSeconds,
         'notes': notes,
+        if (hasWarmup) 'warmup': warmupPercents,
       };
 
   factory PlannedExercise.fromJson(Map<String, dynamic> j) => PlannedExercise(
@@ -58,6 +67,11 @@ class PlannedExercise {
         repsMax: (j['repsMax'] as num?)?.toInt() ?? 12,
         restSeconds: (j['restSeconds'] as num?)?.toInt() ?? 120,
         notes: j['notes'] as String? ?? '',
+        // Las rutinas y copias anteriores a la 1.2.0 no traen este campo.
+        warmupPercents: [
+          for (final p in j['warmup'] as List? ?? const [])
+            if (p is num && p > 0) p.round(),
+        ],
       );
 
   PlannedExercise copy() => PlannedExercise.fromJson(toJson());

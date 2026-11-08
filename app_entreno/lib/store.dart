@@ -198,6 +198,16 @@ class AppStore extends ChangeNotifier {
     return null;
   }
 
+  /// Ejercicio de la rutina tal como está configurado ahora (o null si se borró).
+  PlannedExercise? plannedExercise(String routineId, String exerciseId) {
+    for (final d in routineById(routineId)?.days ?? const <RoutineDay>[]) {
+      for (final e in d.exercises) {
+        if (e.id == exerciseId) return e;
+      }
+    }
+    return null;
+  }
+
   void addRoutine(Routine r) {
     routines.add(r);
     changed();
