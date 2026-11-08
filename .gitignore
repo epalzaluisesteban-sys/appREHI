@@ -1,0 +1,12 @@
+# APK compilados: se publican en GitHub Releases, no en el repositorio
+publicar/
+*.apk
+*.aab
+
+# Clave de firma de Android: NUNCA subirla (el repositorio es público)
+key.properties
+*.jks
+*.keystore
+
+# Configuración local de Claude Code
+.claude/settings.local.json
