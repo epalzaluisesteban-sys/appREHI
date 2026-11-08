@@ -8,6 +8,7 @@ import 'package:registro_entreno/screens/progress_screen.dart';
 import 'package:registro_entreno/screens/workout_screen.dart';
 import 'package:registro_entreno/store.dart';
 import 'package:registro_entreno/theme.dart';
+import 'package:registro_entreno/widgets/rehi_logo.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Future<AppStore> _storeWithData() async {
@@ -84,6 +85,28 @@ void main() {
     final scaffold = tester.widget<Scaffold>(find.byType(Scaffold).first);
     final ctx = tester.element(find.byWidget(scaffold));
     expect(Theme.of(ctx).scaffoldBackgroundColor, paletteById('pizarra').background);
+  });
+
+  testWidgets('el logo cambia de color al instante', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    await initializeDateFormatting('es');
+    final store = AppStore(await SharedPreferences.getInstance());
+    await tester.pumpWidget(_app(store, const SizedBox()));
+    await tester.pumpAndSettle();
+
+    RehiLogoPainter logoPainter() => tester
+        .widget<CustomPaint>(find.descendant(
+          of: find.byType(RehiLogo),
+          matching: find.byType(CustomPaint),
+        ))
+        .painter! as RehiLogoPainter;
+
+    expect(logoPainter().palette.id, 'rojo');
+    for (final id in ['salvia', 'grafito']) {
+      store.setPalette(id);
+      await tester.pump();
+      expect(logoPainter().palette.id, id);
+    }
   });
 
   for (final size in [const Size(360, 780), const Size(1280, 800)]) {

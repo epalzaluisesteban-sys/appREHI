@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../store.dart';
 import '../theme.dart';
 
 /// Logo REHI (barra olímpica sobre el nombre) dibujado en código,
@@ -13,16 +15,25 @@ class RehiLogo extends StatelessWidget {
   final AppPalette? palette;
 
   @override
-  Widget build(BuildContext context) => SizedBox.square(
-        dimension: size,
-        child: CustomPaint(painter: _LogoPainter(palette ?? AppColors.palette)),
-      );
+  Widget build(BuildContext context) {
+    // Escucha el color elegido para redibujarse en cuanto cambia, aunque el logo
+    // se haya creado como `const` (antes solo cambiaba al reabrir la pantalla).
+    final p = palette ??
+        paletteById(context.select<AppStore, String>((s) => s.paletteId));
+    return SizedBox.square(
+      dimension: size,
+      child: CustomPaint(painter: RehiLogoPainter(p)),
+    );
+  }
 }
 
-class _LogoPainter extends CustomPainter {
-  _LogoPainter(this.p);
+@visibleForTesting
+class RehiLogoPainter extends CustomPainter {
+  RehiLogoPainter(this.palette);
 
-  final AppPalette p;
+  final AppPalette palette;
+
+  AppPalette get p => palette;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -84,5 +95,5 @@ class _LogoPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_LogoPainter old) => old.p != p;
+  bool shouldRepaint(RehiLogoPainter old) => old.palette != palette;
 }
