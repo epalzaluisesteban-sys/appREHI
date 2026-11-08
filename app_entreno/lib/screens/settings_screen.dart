@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../data_actions.dart';
 import '../models.dart';
 import '../store.dart';
 import '../theme.dart';
+import '../units.dart';
 import '../widgets/common.dart';
 import '../widgets/rehi_logo.dart';
 import '../widgets/rest_timer.dart' show AlarmSound;
@@ -114,6 +116,63 @@ class SettingsScreen extends StatelessWidget {
               child: Text(
                 'Puedes cambiarla cuando quieras: todo tu historial y tus gráficas '
                 'se convierten automáticamente (1 kg = 2.205 lb).',
+                style: TextStyle(color: AppColors.muted),
+              ),
+            ),
+            const SectionTitle('Exportar registros'),
+            Card(
+              child: Column(
+                children: [
+                  for (final f in ExportFormat.values)
+                    ListTile(
+                      leading: Icon(f.icon),
+                      title: Text('Exportar a ${f.label}'),
+                      subtitle: Text(
+                        f == ExportFormat.excel
+                            ? 'Series, sesiones y resumen por ejercicio (.xlsx)'
+                            : 'Informe para imprimir o compartir (.pdf)',
+                        style: const TextStyle(color: AppColors.muted),
+                      ),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => exportRecords(context, f),
+                    ),
+                ],
+              ),
+            ),
+            const SectionTitle('Copia de seguridad'),
+            Card(
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.backup_outlined),
+                    title: const Text('Guardar copia de seguridad'),
+                    subtitle: Text(
+                      store.lastBackupAt == null
+                          ? 'Aún no has guardado ninguna copia'
+                          : 'Última copia: ${fmtDate(store.lastBackupAt!)}',
+                      style: const TextStyle(color: AppColors.muted),
+                    ),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => saveBackup(context),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.settings_backup_restore),
+                    title: const Text('Restaurar copia'),
+                    subtitle: const Text('Recupera tus rutinas y tu historial desde un archivo',
+                        style: TextStyle(color: AppColors.muted)),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => restoreBackup(context),
+                  ),
+                ],
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(4, 10, 4, 0),
+              child: Text(
+                'Al desinstalar REHI, Android borra los datos de la app. Guarda una copia '
+                'fuera de ella (por ejemplo en Google Drive) y restáurala al volver a '
+                'instalarla. Si tu celular tiene activada la copia de seguridad de Google, '
+                'Android también puede recuperar tus datos automáticamente.',
                 style: TextStyle(color: AppColors.muted),
               ),
             ),

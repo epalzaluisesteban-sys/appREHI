@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
+import 'package:registro_entreno/export.dart';
 import 'package:registro_entreno/main.dart';
 import 'package:registro_entreno/models.dart';
 import 'package:registro_entreno/screens/progress_screen.dart';
@@ -107,6 +108,37 @@ void main() {
       await tester.pump();
       expect(logoPainter().palette.id, id);
     }
+  });
+
+  testWidgets('ajustes: exportar y copia de seguridad', (tester) async {
+    tester.view.physicalSize = const Size(360, 780);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final store = await _storeWithData();
+    await tester.pumpWidget(_app(store, const SizedBox()));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Ajustes'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('Restaurar copia'), 200);
+    expect(find.text('Exportar a Excel'), findsOneWidget);
+    expect(find.text('Aún no has guardado ninguna copia'), findsOneWidget);
+
+    await tester.tap(find.text('Exportar a PDF'));
+    await tester.pumpAndSettle();
+    expect(find.text('2 entrenamientos · pesos en kg'), findsOneWidget);
+    // El resultado depende de la fecha de hoy: se compara con el filtro real.
+    await tester.tap(find.text('30 días'));
+    await tester.pumpAndSettle();
+    final n = sessionsInPeriod(store, ExportPeriod.last30).length;
+    expect(
+      find.text(n == 0
+          ? 'No hay entrenamientos en este periodo.'
+          : '$n entrenamiento${n == 1 ? '' : 's'} · pesos en kg'),
+      findsOneWidget,
+    );
+    expect(find.text('Guardar'), findsOneWidget);
+    expect(find.text('Compartir'), findsOneWidget);
   });
 
   for (final size in [const Size(360, 780), const Size(1280, 800)]) {

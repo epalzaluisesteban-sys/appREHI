@@ -18,6 +18,21 @@ class ProgressPoint {
   double get volumeKg => log.volumeKg;
 }
 
+/// Resumen de un archivo de copia de seguridad.
+class BackupInfo {
+  BackupInfo({
+    required this.data,
+    required this.exportedAt,
+    required this.routineCount,
+    required this.sessionCount,
+  });
+
+  final Map<String, dynamic> data;
+  final DateTime? exportedAt;
+  final int routineCount;
+  final int sessionCount;
+}
+
 String _norm(String name) => name.trim().toLowerCase();
 
 /// Estado de la app y persistencia local (funciona en móvil, escritorio y web).
@@ -45,31 +60,45 @@ class AppStore extends ChangeNotifier {
   /// Entrenamiento en curso (se guarda para poder retomarlo).
   WorkoutSession? active;
 
+  /// Fecha de la última copia de seguridad guardada en un archivo.
+  DateTime? lastBackupAt;
+
   void load() {
     final raw = _prefs.getString(_storageKey);
     if (raw == null) return;
     try {
-      final j = jsonDecode(raw) as Map<String, dynamic>;
-      unit = WeightUnit.values.firstWhere(
-        (u) => u.name == j['unit'],
-        orElse: () => WeightUnit.kg,
-      );
-      paletteId = j['palette'] as String? ?? 'rojo';
-      alarmSound = j['alarmSound'] as bool? ?? true;
-      routines
-        ..clear()
-        ..addAll((j['routines'] as List? ?? [])
-            .map((r) => Routine.fromJson(r as Map<String, dynamic>)));
-      sessions
-        ..clear()
-        ..addAll((j['sessions'] as List? ?? [])
-            .map((s) => WorkoutSession.fromJson(s as Map<String, dynamic>)));
-      _sortSessions();
-      final a = j['active'];
-      active = a == null ? null : WorkoutSession.fromJson(a as Map<String, dynamic>);
+      _apply(jsonDecode(raw) as Map<String, dynamic>);
     } catch (e) {
       debugPrint('No se pudieron leer los datos guardados: $e');
     }
+  }
+
+  void _apply(Map<String, dynamic> j) {
+    final newRoutines = (j['routines'] as List? ?? [])
+        .map((r) => Routine.fromJson(r as Map<String, dynamic>))
+        .toList();
+    final newSessions = (j['sessions'] as List? ?? [])
+        .map((s) => WorkoutSession.fromJson(s as Map<String, dynamic>))
+        .toList();
+    final a = j['active'];
+    final newActive = a == null ? null : WorkoutSession.fromJson(a as Map<String, dynamic>);
+
+    // Solo se modifica el estado cuando todo se leyó sin errores.
+    unit = WeightUnit.values.firstWhere(
+      (u) => u.name == j['unit'],
+      orElse: () => WeightUnit.kg,
+    );
+    paletteId = j['palette'] as String? ?? 'rojo';
+    alarmSound = j['alarmSound'] as bool? ?? true;
+    lastBackupAt = DateTime.tryParse(j['lastBackupAt'] as String? ?? '');
+    routines
+      ..clear()
+      ..addAll(newRoutines);
+    sessions
+      ..clear()
+      ..addAll(newSessions);
+    _sortSessions();
+    active = newActive;
   }
 
   Map<String, dynamic> toJson() => {
@@ -79,7 +108,52 @@ class AppStore extends ChangeNotifier {
         'routines': routines.map((r) => r.toJson()).toList(),
         'sessions': sessions.map((s) => s.toJson()).toList(),
         'active': active?.toJson(),
+        'lastBackupAt': lastBackupAt?.toIso8601String(),
       };
+
+  // ---------- Copia de seguridad ----------
+
+  /// Contenido del archivo de copia de seguridad (JSON).
+  String exportBackup({DateTime? now}) {
+    lastBackupAt = now ?? DateTime.now();
+    changed();
+    return const JsonEncoder.withIndent(' ').convert({
+      'app': 'REHI',
+      'format': 1,
+      'exportedAt': lastBackupAt!.toIso8601String(),
+      'data': toJson(),
+    });
+  }
+
+  /// Lee un archivo de copia sin aplicarlo, para mostrar qué contiene.
+  /// Lanza [FormatException] si no es una copia válida de REHI.
+  static BackupInfo readBackup(String raw) {
+    try {
+      final j = jsonDecode(raw);
+      if (j is! Map<String, dynamic> || j['app'] != 'REHI' || j['data'] is! Map) {
+        throw const FormatException();
+      }
+      final data = j['data'] as Map<String, dynamic>;
+      return BackupInfo(
+        data: data,
+        exportedAt: DateTime.tryParse(j['exportedAt'] as String? ?? ''),
+        routineCount: (data['routines'] as List? ?? []).length,
+        sessionCount: (data['sessions'] as List? ?? []).length,
+      );
+    } catch (_) {
+      throw const FormatException('El archivo no es una copia de seguridad de REHI.');
+    }
+  }
+
+  /// Reemplaza todos los datos por los de la copia.
+  void restoreBackup(BackupInfo backup) {
+    try {
+      _apply(backup.data);
+    } catch (_) {
+      throw const FormatException('La copia de seguridad está dañada.');
+    }
+    changed();
+  }
 
   /// Notifica a la interfaz y guarda de inmediato.
   void changed() {

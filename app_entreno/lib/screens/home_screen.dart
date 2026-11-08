@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../data_actions.dart';
 import '../models.dart';
 import '../store.dart';
 import '../theme.dart';
@@ -63,10 +64,22 @@ class HomeScreen extends StatelessWidget {
               message:
                   'Crea tu primera rutina con el botón + y agrégale los días '
                   'que quieras (p. ej. Torso y Pierna).',
-              action: FilledButton.icon(
-                onPressed: () => _newRoutine(context),
-                icon: const Icon(Icons.add),
-                label: const Text('Crear rutina'),
+              action: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  FilledButton.icon(
+                    onPressed: () => _newRoutine(context),
+                    icon: const Icon(Icons.add),
+                    label: const Text('Crear rutina'),
+                  ),
+                  const SizedBox(height: 8),
+                  TextButton.icon(
+                    style: TextButton.styleFrom(foregroundColor: Colors.white),
+                    onPressed: () => restoreBackup(context),
+                    icon: const Icon(Icons.settings_backup_restore),
+                    label: const Text('Restaurar copia de seguridad'),
+                  ),
+                ],
               ),
             )
           : LayoutBuilder(
