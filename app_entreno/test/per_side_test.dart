@@ -182,7 +182,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('kg/lado'), findsOneWidget);
     expect(find.text('Peso por lado ×2 · se registra el total'), findsOneWidget);
-    expect(find.text('50×12 @2'), findsOneWidget);
+    expect(find.text('50×12'), findsOneWidget);
+    expect(find.text('RIR 2'), findsOneWidget);
     expect(find.text('20 · 30 · 40 kg/lado'), findsOneWidget);
 
     // Se escribe un lado (60) y se registra el total (120).

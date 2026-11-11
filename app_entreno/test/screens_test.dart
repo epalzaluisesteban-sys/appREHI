@@ -216,7 +216,12 @@ void main() {
       startWorkoutFlow(ctx, routine, routine.days.first);
       await tester.pumpAndSettle();
       expect(find.byType(WorkoutScreen), findsOneWidget);
-      expect(find.text('32.5×10 @2'), findsWidgets);
+      expect(find.text('32.5×10'), findsWidgets);
+      expect(find.text('RIR 2'), findsWidgets);
+      // «Anterior» deja al menos 8 px libres antes del campo de peso.
+      final prevRight = tester.getRect(find.text('32.5×10').first).right;
+      final weightLeft = tester.getRect(find.byType(TextField).first).left;
+      expect(weightLeft - prevRight, greaterThanOrEqualTo(8));
       // El encabezado "Serie" cabe en una sola línea (antes la "e" bajaba).
       expect(tester.getSize(find.text('Serie').first).height, lessThan(20));
 

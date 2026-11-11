@@ -487,10 +487,10 @@ class _SetRowState extends State<_SetRow> {
     final s = widget.set;
     final p = widget.previous;
     final fb = widget.fallback();
-    final prevText = p == null || !p.hasData
-        ? '—'
-        : '${fmtNum(kgToUnit(p.weightKg! / _factor, widget.unit))}×${p.reps}'
-            '${p.rir == null ? '' : ' @${p.rir}'}';
+    final hasPrev = p != null && p.hasData;
+    final prevText =
+        hasPrev ? '${fmtNum(kgToUnit(p.weightKg! / _factor, widget.unit))}×${p.reps}' : '—';
+    final prevRir = hasPrev && p.rir != null ? 'RIR ${p.rir}' : null;
     const fieldStyle = TextStyle(fontWeight: FontWeight.w700, color: Colors.white);
 
     return Container(
@@ -502,7 +502,7 @@ class _SetRowState extends State<_SetRow> {
       ),
       child: Column(
         children: [
-          _fieldsRow(s, prevText, fb, fieldStyle, store),
+          _fieldsRow(s, prevText, prevRir, fb, fieldStyle, store),
           // Total (los dos lados) en su propia línea, bajo la columna del peso,
           // para que los campos de la fila queden alineados.
           if (widget.perSide)
@@ -535,6 +535,7 @@ class _SetRowState extends State<_SetRow> {
   Widget _fieldsRow(
     SetLog s,
     String prevText,
+    String? prevRir,
     SetLog? fb,
     TextStyle fieldStyle,
     AppStore store,
@@ -546,10 +547,28 @@ class _SetRowState extends State<_SetRow> {
             child: Text('${widget.index + 1}',
                 textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.w700)),
           ),
+          // Anterior: peso×reps arriba y el RIR debajo, con un margen fijo
+          // antes del campo de peso. Si no cabe, se achica (nunca lo toca).
           Expanded(
-            child: Text(prevText,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: AppColors.muted, fontSize: 13)),
+            child: Padding(
+              padding: const EdgeInsets.only(right: _Col.prevGap),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(prevText,
+                        maxLines: 1,
+                        style: const TextStyle(color: AppColors.muted, fontSize: 13)),
+                    if (prevRir != null)
+                      Text(prevRir,
+                          maxLines: 1,
+                          style: const TextStyle(color: AppColors.subtle, fontSize: 11)),
+                  ],
+                ),
+              ),
+            ),
           ),
           SizedBox(
             width: _Col.weight,
@@ -689,6 +708,9 @@ abstract final class _Col {
   static const double rir = 42;
   static const double check = 44;
   static const double gap = 4;
+
+  /// Separación mínima entre «Anterior» y el campo de peso.
+  static const double prevGap = 8;
 }
 
 /// Título de columna en una sola línea (se reduce si no cabe, nunca se parte).
