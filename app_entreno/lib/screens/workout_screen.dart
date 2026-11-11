@@ -162,17 +162,19 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
             ),
             const SizedBox(height: 12),
             for (var i = 0; i < s.exercises.length; i++) ...[
-              _ExerciseCard(
-                key: ValueKey('${s.exercises[i].exerciseId}-${store.unit.name}'),
-                log: s.exercises[i],
-                unit: store.unit,
-                previous: store.previousSetsFor(s.exercises[i].name),
-                warmupPercents: store
-                        .plannedExercise(s.routineId, s.exercises[i].exerciseId)
-                        ?.warmupPercents ??
-                    const [],
-                onSetDone: () => _onSetDone(s, i, s.exercises[i]),
-              ),
+              Builder(builder: (context) {
+                final planned = store.plannedExercise(s.routineId, s.exercises[i].exerciseId);
+                final perSide = planned?.perSide ?? false;
+                return _ExerciseCard(
+                  key: ValueKey('${s.exercises[i].exerciseId}-${store.unit.name}-$perSide'),
+                  log: s.exercises[i],
+                  unit: store.unit,
+                  previous: store.previousSetsFor(s.exercises[i].name),
+                  warmupPercents: planned?.warmupPercents ?? const [],
+                  perSide: perSide,
+                  onSetDone: () => _onSetDone(s, i, s.exercises[i]),
+                );
+              }),
               const SizedBox(height: 12),
             ],
             TextButton.icon(
@@ -207,6 +209,7 @@ class _ExerciseCard extends StatefulWidget {
     required this.unit,
     required this.previous,
     required this.warmupPercents,
+    required this.perSide,
     required this.onSetDone,
   });
 
@@ -214,6 +217,9 @@ class _ExerciseCard extends StatefulWidget {
   final WeightUnit unit;
   final List<SetLog> previous;
   final List<int> warmupPercents;
+
+  /// Se escribe el peso de un lado y se guarda el total (x2).
+  final bool perSide;
   final VoidCallback onSetDone;
 
   @override
@@ -304,6 +310,11 @@ class _ExerciseCardState extends State<_ExerciseCard> {
                         '$done/${log.sets.length} series',
                         style: const TextStyle(color: AppColors.muted, fontSize: 13),
                       ),
+                      if (widget.perSide)
+                        const Text(
+                          'Peso por lado ×2 · se registra el total',
+                          style: TextStyle(color: AppColors.muted, fontSize: 13),
+                        ),
                     ],
                   ),
                 ),
@@ -328,13 +339,14 @@ class _ExerciseCardState extends State<_ExerciseCard> {
                 baseKg: warmupBaseKg(log.sets, previous),
                 percents: widget.warmupPercents,
                 unit: unit,
+                perSide: widget.perSide,
               ),
             const SizedBox(height: 6),
             Row(
               children: [
                 _head('Serie', _Col.set, headStyle),
                 Expanded(child: _head('Anterior', null, headStyle, align: TextAlign.left)),
-                _head(unit.label, _Col.weight, headStyle),
+                _head(widget.perSide ? '${unit.label}/lado' : unit.label, _Col.weight, headStyle),
                 const SizedBox(width: _Col.gap),
                 _head('Reps', _Col.reps, headStyle),
                 const SizedBox(width: _Col.gap),
@@ -348,6 +360,7 @@ class _ExerciseCardState extends State<_ExerciseCard> {
                 index: i,
                 set: log.sets[i],
                 unit: unit,
+                perSide: widget.perSide,
                 previous: i < previous.length ? previous[i] : null,
                 fallback: () => _fallbackFor(i),
                 onDone: onSetDone,
@@ -392,6 +405,7 @@ class _SetRow extends StatefulWidget {
     required this.index,
     required this.set,
     required this.unit,
+    required this.perSide,
     required this.previous,
     required this.fallback,
     required this.onDone,
@@ -401,6 +415,9 @@ class _SetRow extends StatefulWidget {
   final int index;
   final SetLog set;
   final WeightUnit unit;
+
+  /// El campo de peso muestra un lado; el registro guarda el total.
+  final bool perSide;
   final SetLog? previous;
   final SetLog? Function() fallback;
   final VoidCallback onDone;
@@ -411,7 +428,13 @@ class _SetRow extends StatefulWidget {
 }
 
 class _SetRowState extends State<_SetRow> {
-  late final _w = TextEditingController(text: weightField(widget.set.weightKg, widget.unit));
+  int get _factor => widget.perSide ? 2 : 1;
+
+  /// Peso que se ve en la fila: el total o, con peso por lado, la mitad.
+  String _shown(double? totalKg) =>
+      weightField(totalKg == null ? null : totalKg / _factor, widget.unit);
+
+  late final _w = TextEditingController(text: _shown(widget.set.weightKg));
   late final _r = TextEditingController(text: widget.set.reps?.toString() ?? '');
   late final _rir = TextEditingController(text: widget.set.rir?.toString() ?? '');
 
@@ -434,7 +457,7 @@ class _SetRowState extends State<_SetRow> {
     final fb = widget.fallback();
     if (s.weightKg == null && fb?.weightKg != null) {
       s.weightKg = fb!.weightKg;
-      _w.text = weightField(s.weightKg, widget.unit);
+      _w.text = _shown(s.weightKg);
     }
     if (s.reps == null && fb?.reps != null) {
       s.reps = fb!.reps;
@@ -466,7 +489,7 @@ class _SetRowState extends State<_SetRow> {
     final fb = widget.fallback();
     final prevText = p == null || !p.hasData
         ? '—'
-        : '${fmtNum(kgToUnit(p.weightKg!, widget.unit))}×${p.reps}'
+        : '${fmtNum(kgToUnit(p.weightKg! / _factor, widget.unit))}×${p.reps}'
             '${p.rir == null ? '' : ' @${p.rir}'}';
     const fieldStyle = TextStyle(fontWeight: FontWeight.w700, color: Colors.white);
 
@@ -477,7 +500,46 @@ class _SetRowState extends State<_SetRow> {
         color: s.done ? AppColors.doneRow : Colors.transparent,
         borderRadius: BorderRadius.circular(10),
       ),
-      child: Row(
+      child: Column(
+        children: [
+          _fieldsRow(s, prevText, fb, fieldStyle, store),
+          // Total (los dos lados) en su propia línea, bajo la columna del peso,
+          // para que los campos de la fila queden alineados.
+          if (widget.perSide)
+            Row(
+              children: [
+                const SizedBox(width: _Col.set),
+                const Spacer(),
+                SizedBox(
+                  width: _Col.weight,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      s.weightKg == null
+                          ? 'total —'
+                          : 'total ${fmtWeight(s.weightKg!, widget.unit)}',
+                      maxLines: 1,
+                      style: const TextStyle(color: AppColors.muted, fontSize: 11),
+                    ),
+                  ),
+                ),
+                const SizedBox(
+                    width: _Col.gap + _Col.reps + _Col.gap + _Col.rir + _Col.check),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _fieldsRow(
+    SetLog s,
+    String prevText,
+    SetLog? fb,
+    TextStyle fieldStyle,
+    AppStore store,
+  ) =>
+      Row(
         children: [
           SizedBox(
             width: _Col.set,
@@ -498,11 +560,12 @@ class _SetRowState extends State<_SetRow> {
               style: fieldStyle,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
-              decoration: _dec(fb?.weightKg == null ? null : weightField(fb!.weightKg, widget.unit)),
+              decoration: _dec(fb?.weightKg == null ? null : _shown(fb!.weightKg)),
               onChanged: (v) {
                 final n = parseNum(v);
-                s.weightKg = n == null ? null : unitToKg(n, widget.unit);
+                s.weightKg = n == null ? null : unitToKg(n * _factor, widget.unit);
                 store.saveSoon();
+                if (widget.perSide) setState(() {});
                 widget.onWeightChanged?.call();
               },
             ),
@@ -557,22 +620,31 @@ class _SetRowState extends State<_SetRow> {
             ),
           ),
         ],
-      ),
-    );
-  }
+      );
 }
 
 /// Pesos de las series de aproximación: "Aproximación  17 · 36 · 45 kg".
+/// Con peso por lado, son los pesos de cada lado (la mitad del total).
 class _WarmupLine extends StatelessWidget {
-  const _WarmupLine({required this.baseKg, required this.percents, required this.unit});
+  const _WarmupLine({
+    required this.baseKg,
+    required this.percents,
+    required this.unit,
+    required this.perSide,
+  });
 
   final double? baseKg;
   final List<int> percents;
   final WeightUnit unit;
+  final bool perSide;
 
   @override
   Widget build(BuildContext context) {
     final base = baseKg;
+    final weights = base == null
+        ? const <int>[]
+        : warmupWeights(base, percents, unit, perSide: perSide);
+    final unitText = perSide ? '${unit.label}/lado' : unit.label;
     return Container(
       margin: const EdgeInsets.only(top: 8, right: 4),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -592,9 +664,9 @@ class _WarmupLine extends StatelessWidget {
                 ? const Text('escribe el peso de trabajo',
                     style: TextStyle(color: AppColors.muted, fontSize: 13))
                 : Text(
-                    '${warmupWeights(base, percents, unit).join(' · ')} ${unit.label}',
+                    '${weights.join(' · ')} $unitText',
                     semanticsLabel: 'Series de aproximación: '
-                        '${warmupWeights(base, percents, unit).join(', ')} ${unit.label}',
+                        '${weights.join(', ')} ${unit.label}${perSide ? ' por lado' : ''}',
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 16,

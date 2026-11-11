@@ -29,6 +29,7 @@ class PlannedExercise {
     this.restSeconds = 120,
     this.notes = '',
     List<int>? warmupPercents,
+    this.perSide = false,
   })  : id = id ?? newId(),
         warmupPercents = warmupPercents ?? [];
 
@@ -46,6 +47,14 @@ class PlannedExercise {
 
   bool get hasWarmup => warmupPercents.isNotEmpty;
 
+  /// Peso por lado (X×2): en máquinas donde se cargan discos a cada lado,
+  /// durante el entrenamiento se escribe el peso de un lado y en el
+  /// registro se guarda el total (el doble).
+  bool perSide;
+
+  /// Cuántas veces se multiplica el peso escrito para obtener el total.
+  int get loadFactor => perSide ? 2 : 1;
+
   String get repsLabel => repsMin == repsMax ? '$repsMin' : '$repsMin–$repsMax';
 
   Map<String, dynamic> toJson() => {
@@ -57,6 +66,7 @@ class PlannedExercise {
         'restSeconds': restSeconds,
         'notes': notes,
         if (hasWarmup) 'warmup': warmupPercents,
+        if (perSide) 'perSide': true,
       };
 
   factory PlannedExercise.fromJson(Map<String, dynamic> j) => PlannedExercise(
@@ -72,6 +82,8 @@ class PlannedExercise {
           for (final p in j['warmup'] as List? ?? const [])
             if (p is num && p > 0) p.round(),
         ],
+        // Las rutinas y copias anteriores a la 1.3.0 no traen este campo.
+        perSide: j['perSide'] == true,
       );
 
   PlannedExercise copy() => PlannedExercise.fromJson(toJson());

@@ -23,7 +23,8 @@ Todas las versiones están en [Releases](https://github.com/epalzaluisesteban-sy
 - Registro por serie de peso, repeticiones y RIR, con la fecha del entrenamiento.
 - Temporizador de descanso configurable por ejercicio, con alarma sonora.
 - Series de aproximación opcionales por ejercicio: eliges cuántas y el porcentaje de cada una, y durante el entrenamiento se muestra el peso de cada serie según tu peso de trabajo.
-- Gráfica de progreso por ejercicio (peso máximo, 1RM estimado y volumen).
+- Peso por lado (X×2) opcional por ejercicio, para máquinas donde pones discos a cada lado: escribes el peso de un lado (y las aproximaciones se muestran por lado), pero en el registro queda el total.
+- Gráfica de progreso por ejercicio (peso máximo, 1RM estimado y volumen), con una guía debajo (?) que explica cómo leerla y qué números indican que vas bien o que conviene revisar.
 - Duración de cada sesión y promedio por día de rutina.
 - Unidades en kg o lb y 7 colores de tema.
 - Exportación de los registros a Excel y PDF.

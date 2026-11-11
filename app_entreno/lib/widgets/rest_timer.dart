@@ -12,9 +12,40 @@ import '../units.dart';
 class AlarmSound {
   static AudioPlayer? _player;
 
+  /// Cómo convive la alarma con la música de otras apps.
+  ///
+  /// Por defecto el reproductor pide el foco de audio de forma permanente y
+  /// las apps de música (Spotify, YouTube Music…) se pausan y no vuelven a
+  /// sonar. Con un foco temporal que solo «baja el volumen» de los demás
+  /// (ducking), la música sigue sonando más bajo durante el pitido y recupera
+  /// su volumen al terminar. En iPhone se mezcla con la música sin pausarla.
+  static AudioContext get audioContext => AudioContext(
+        android: const AudioContextAndroid(
+          contentType: AndroidContentType.sonification,
+          usageType: AndroidUsageType.media,
+          audioFocus: AndroidAudioFocus.gainTransientMayDuck,
+        ),
+        iOS: AudioContextIOS(
+          category: AVAudioSessionCategory.playback,
+          options: const {AVAudioSessionOptions.mixWithOthers},
+        ),
+      );
+
+  static Future<AudioPlayer> _create() async {
+    final p = AudioPlayer();
+    await p.setReleaseMode(ReleaseMode.stop);
+    try {
+      await p.setAudioContext(audioContext);
+    } catch (e) {
+      // Si la plataforma no lo admite, la alarma suena igual.
+      debugPrint('No se pudo configurar el audio de la alarma: $e');
+    }
+    return p;
+  }
+
   static Future<void> play() async {
     try {
-      final p = _player ??= AudioPlayer()..setReleaseMode(ReleaseMode.stop);
+      final p = _player ??= await _create();
       await p.stop();
       await p.play(AssetSource('sounds/alarma.wav'), volume: 1);
     } catch (e) {

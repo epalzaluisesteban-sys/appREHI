@@ -95,6 +95,7 @@ class DayScreen extends StatelessWidget {
                         subtitle: Text(
                           '${ex.sets} series × ${ex.repsLabel} reps · '
                           'descanso ${fmtRest(ex.restSeconds)}'
+                          '${ex.perSide ? '\nPeso por lado (×2)' : ''}'
                           '${ex.hasWarmup ? '\nAproximación: ${ex.warmupPercents.join(' · ')} %' : ''}'
                           '${ex.notes.isEmpty ? '' : '\n${ex.notes}'}',
                           style: const TextStyle(color: AppColors.muted),

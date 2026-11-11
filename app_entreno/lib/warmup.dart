@@ -28,7 +28,14 @@ double? warmupBaseKg(List<SetLog> today, List<SetLog> previous) {
 
 /// Peso de cada serie de aproximación, en la unidad del usuario y
 /// redondeado a números enteros (son pesos aproximados).
-List<int> warmupWeights(double baseKg, List<int> percents, WeightUnit unit) {
-  final base = kgToUnit(baseKg, unit);
+///
+/// Con [perSide] el resultado es el peso de cada lado (la mitad del total).
+List<int> warmupWeights(
+  double baseKg,
+  List<int> percents,
+  WeightUnit unit, {
+  bool perSide = false,
+}) {
+  final base = kgToUnit(baseKg, unit) / (perSide ? 2 : 1);
   return [for (final p in percents) (base * p / 100).round()];
 }

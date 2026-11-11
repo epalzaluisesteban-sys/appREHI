@@ -234,8 +234,12 @@ void main() {
       Navigator.of(tester.element(find.byType(WorkoutScreen))).push(MaterialPageRoute(
           builder: (_) => const ProgressScreen(exerciseName: 'Remo con barra')));
       await tester.pumpAndSettle();
-      expect(find.text('HISTORIAL'), findsOneWidget);
       expect(find.text('1RM estimado'), findsOneWidget);
+      expect(find.text('¿Cómo leer esta gráfica?'), findsOneWidget);
+      // El historial queda debajo de la explicación de la gráfica.
+      await tester.scrollUntilVisible(find.text('HISTORIAL'), 300,
+          scrollable: find.byType(Scrollable).last);
+      expect(find.text('HISTORIAL'), findsOneWidget);
       expect(find.textContaining('lb'), findsWidgets);
 
       store.discardActive();

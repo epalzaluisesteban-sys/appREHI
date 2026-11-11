@@ -156,6 +156,19 @@ class _ExerciseEditorState extends State<_ExerciseEditor> {
                 style: TextStyle(color: AppColors.muted, fontSize: 13),
               ),
             ),
+            const SectionTitle('Carga de la máquina'),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Peso por lado (X×2)'),
+              subtitle: const Text(
+                'Para máquinas donde pones discos a cada lado. En el entrenamiento '
+                'escribes el peso de un solo lado y se registra el total (el doble). '
+                'Las aproximaciones también se muestran por lado.',
+                style: TextStyle(color: AppColors.muted, fontSize: 13),
+              ),
+              value: _ex.perSide,
+              onChanged: (v) => setState(() => _ex.perSide = v),
+            ),
             const SectionTitle('Series de aproximación (opcional)'),
             _WarmupEditor(
               percents: _ex.warmupPercents,
